@@ -57,20 +57,23 @@ function Litespeed:unpack()
 end
 
 --- Sets the x and y components in a Vector.
--- @param x The x component
--- @param y The y component
+-- @param a The x component or a Vector
+-- @param b The y component
 -- @returns self
-function Litespeed:set(x, y)
-   self.x = x or self.x
-   self.y = y or self.y
-
-   self._flags = 0
+function Litespeed:set(a, b)
+   if isVector(a) then
+      self.x = a.x
+      self.y = a.y
+   else
+      self.x = a or self.x
+      self.y = b or self.y
+   end
 
    return self
 end
 
 --- Adds a, b to the Vector
--- @param a The x component or the Vector to add
+-- @param a The x component or a Vector
 -- @param b the y component or nil
 -- @returns self
 function Litespeed:add(a, b)
@@ -85,37 +88,111 @@ function Litespeed:add(a, b)
    return self
 end
 
+--- Subtracts a, b from the Vector
+-- @param a The x component or a Vector
+-- @param b the y component or nil
+-- @returns self
 function Litespeed:sub(a, b)
+   if isVector(a) then
+      self.x = self.x - a.x
+      self.y = self.y - a.y
+   else
+      self.x = self.x - a or 0
+      self.y = self.y - b or 0
+   end
+
+   return self
 end
 
+--- Multiplies the Vector by a, b
+-- @param a The x component or a Vector
+-- @param b the y component or nil
+-- @returns self
 function Litespeed:mul(a, b)
+   if isVector(a) then
+      self.x = self.x * a.x
+      self.y = self.y * a.y
+   else
+      self.x = self.x * a or 1
+      self.y = self.y * b or 1
+   end
+
+   return self
 end
 
+--- Divides the Vector by a, b
+-- @param a The x component or a Vector
+-- @param b the y component or nil
+-- @returns self
 function Litespeed:div(a, b)
+   if isVector(a) then
+      self.x = self.x / a.x
+      self.y = self.y / a.y
+   else
+      self.x = self.x / a or 1
+      self.y = self.y / b or 1
+   end
+
+   return self
 end
 
-function Litespeed:addTo(a, b, t)
+--- Scales the Vector.
+-- @param scale The scalar
+-- @returns self
+function Litespeed:scale(scale)
+   self.x = self.x * scale
+   self.y = self.y * scale
+
+   return self
 end
 
-function Litespeed:subTo(a, b, t)
-end
-
-function Litespeed:divTo(a, b, t)
-end
-
-function Litespeed:mulTo(a, b, t)
-end
-
+--- Returns the distance between 2 Vectors.
+-- @param o The other Vector
+-- @returns The distance between the Vectors
 function Litespeed:distance(o)
-
+   local dx = self.x - o.x
+   local dy = self.y - o.y
+   
+   return sqrt(dx * dx + dy * dy)
 end
 
+--- Returns the distance squared between 2 Vectors.
+-- @param o The other Vector
+-- @returns The distance squared between the Vectors
 function Litespeed:distance2(o)
-
+   local dx = self.x - o.x
+   local dy = self.y - o.y
+   
+   return dx * dx + dy * dy
 end
 
+--- Normalize the Vector in place.
+-- @return self
 function Litespeed:normalize()
+   if v.x ~= 0 and v.y ~= 0 then
+      local l = sqrt(v.x * v.x + v.y * v.y)
+   
+     self.x = self.x / l
+     self.y = self.y / l
+   end
+end
 
+--- Returns the normalized Vector.
+-- @returns The normalized Vector
+function Litespeed:normalized()
+   if v.x ~= 0 and v.y ~= 0 then
+      local l = sqrt(v.x * v.x + v.y * v.y)
+   
+      return new(v.x / l, v.y / l)
+   end
+   
+   return self:copy()
+end
+
+--- Returns a Vector perpendicular to it.
+-- @returns The perpendicular Vector
+function Litespeed:perpendicular()
+   return new(-v.y, v.x)
 end
 
 function Litespeed:rotate(phi)
@@ -146,28 +223,50 @@ function Litespeed:copy()
    return copy
 end
 
-function Litespeed.__unm(a, b)
+function Litespeed.__unm()
+   return new(-a.x, -a.y)
 end
 
 function Litespeed.__add(a, b)
    if isVector(a) then
       if isVector(b) then
          -- Vector + Vector
+         return new(a.x + b.x, a.y + b.y)
       elseif type(b) == "number" then
          -- Vector + Number
+         return new(a.x + b, a.y + b)
       else
          -- Vector + ?
-         error("Vector + ? u fucked up")
+         error("__add wrong argument. Number expected")
       end
    elseif type(a) == "number" then
       -- Number + Vector
+      return new(a + b.x, a + b.y)
    else
       -- ? + Vector
-      error("? + Vector u fucked up")
+      error("__add wrong argument. Number expected")
    end
 end
 
 function Litespeed.__sub(a, b)
+   if isVector(a) then
+      if isVector(b) then
+         -- Vector - Vector
+         return new(a.x - b.x, a.y - b.y)
+      elseif type(b) == "number" then
+         -- Vector - Number
+         return new(a.x - b, a.y - b)
+      else
+         -- Vector - ?
+         error("__add wrong argument. Number expected")
+      end
+   elseif type(a) == "number" then
+      -- Number - Vector
+      return new(a - b.x, a - b.y)
+   else
+      -- ? - Vector
+      error("__add wrong argument. Number expected")
+   end
 end
 
 function Litespeed.__mul(a, b)
@@ -210,12 +309,6 @@ function Litespeed.__index(v, key)
       return v.x * v.x + v.y * v.y
    elseif key == "angle" then
       return atan2(v.y, v.x)
-   elseif key == "normalized" then
-      local length = sqrt(v.x * v.x + v.y * v.y)
-      
-      return new(v.x / length, v.y / length)
-   elseif key == "perpendicular" then
-      return new(-v.y, v.x)
    end
 end
 
